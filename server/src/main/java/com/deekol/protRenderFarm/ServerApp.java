@@ -1,5 +1,6 @@
 package com.deekol.protRenderFarm;
 
+import com.deekol.protRenderFarm.handlers.MainHandler;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -9,8 +10,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
@@ -18,28 +18,28 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 /*
 Запуск приложения с настройкой SpringBoot(без web'а) и логами.
-Настройка запуска сервера на Netty
+Настройка запуска сервера на Netty.
+Добавлен MainHandler. Подключаюсь к серверу с помощью telnet (PuTTY программы).
  */
 
+@Slf4j
 @SpringBootApplication
 public class ServerApp implements CommandLineRunner {
     @Value("${port}")
     int port;
 
-    private static Logger LOG = LoggerFactory.getLogger(ServerApp.class);
-
     public static void main(String[] args) {
-        LOG.info("STARTING THE APPLICATION");
+        log.info("STARTING THE APPLICATION");
         SpringApplication.run(ServerApp.class, args);
-        LOG.info("APPLICATION FINISHED");
+        log.info("APPLICATION FINISHED");
     }
 
     @Override
     public void run(String... args) {
         //Вывод логов
-        LOG.info("EXECUTING : command line runner");
+        log.info("EXECUTING : command line runner");
         for (int i = 0; i < args.length; ++i) {
-            LOG.info("args[{}]: {}", i, args[i]);
+            log.info("args[{}]: {}", i, args[i]);
         }
 
         //Настройка и запуск сервера
@@ -54,12 +54,12 @@ public class ServerApp implements CommandLineRunner {
                     .childHandler(new ChannelInitializer<SocketChannel>() {
                         @Override
                         protected void initChannel(SocketChannel ch) throws Exception {
-                            ch.pipeline().addLast(new StringDecoder(), new StringEncoder()); //Добавляем декодер и энкодер
+                            ch.pipeline().addLast(new StringDecoder(), new StringEncoder(), new MainHandler()); //Добавляем декодер и энкодер
                         } //Инициализация клиента
                     });
             //Запуск сервера
             ChannelFuture future = b.bind(port).sync();
-            LOG.info("Starting server on port: 8000");
+            log.info("Starting server on port: 8000");
             future.channel().closeFuture().sync();
         } catch (Exception e) {
             e.printStackTrace();

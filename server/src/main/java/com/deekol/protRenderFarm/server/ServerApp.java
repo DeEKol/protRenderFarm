@@ -1,6 +1,6 @@
-package com.deekol.protRenderFarm;
+package com.deekol.protRenderFarm.server;
 
-import com.deekol.protRenderFarm.handlers.MainHandler;
+import com.deekol.protRenderFarm.server.handlers.MainHandler;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;

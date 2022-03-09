@@ -1,4 +1,4 @@
-package com.deekol.protRenderFarm.handlers;
+package com.deekol.protRenderFarm.server.handlers;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -19,6 +19,7 @@ public class MainHandler extends SimpleChannelInboundHandler<String> {
         log.info("Client connected");
         channelClient = ctx.channel();
         channelClient.writeAndFlush("Connected" + System.lineSeparator());
+        channelClient.writeAndFlush(helper + System.lineSeparator());
     }
 
     //Чтение канала
@@ -33,4 +34,11 @@ public class MainHandler extends SimpleChannelInboundHandler<String> {
         log.info("Client leave");
         ctx.close();
     }
+
+    //help сообщение
+    String helper = "Usage:" + System.lineSeparator() + "  -h, --help        Show help message" + System.lineSeparator()
+            + "  -l, --login       Log in (-l user password)" + System.lineSeparator()
+            + "  -r, --reg         Registration (-r user password)" + System.lineSeparator()
+            + "  -n, --newtask     Add new task" + System.lineSeparator()
+            + "  -t, --tasks       Get all task" + System.lineSeparator();
 }

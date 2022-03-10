@@ -20,10 +20,11 @@ public class UserEntity {
 
     private String password;
 
-    @OneToMany(mappedBy = "userEntity")
+    @OneToMany(fetch = FetchType.EAGER, mappedBy = "userEntity")
     private List<TaskEntity> taskEntities;
 
-    public UserEntity(String username) {
+    public UserEntity(String username, String password) {
         this.username = username;
+        this.password = password;
     }
 }

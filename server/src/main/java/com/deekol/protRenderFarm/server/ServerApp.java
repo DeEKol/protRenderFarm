@@ -1,6 +1,8 @@
 package com.deekol.protRenderFarm.server;
 
 import com.deekol.protRenderFarm.server.handlers.MainHandler;
+import com.deekol.protRenderFarm.server.repo.TaskRepo;
+import com.deekol.protRenderFarm.server.repo.UserRepo;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -25,8 +27,16 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @Slf4j
 @SpringBootApplication
 public class ServerApp implements CommandLineRunner {
+    private final UserRepo userRepo;
+    private final TaskRepo taskRepo;
+
+    public ServerApp(UserRepo userRepo, TaskRepo taskRepo) {
+        this.userRepo = userRepo;
+        this.taskRepo = taskRepo;
+    }
+
     @Value("${port}")
-    int port;
+    private int port;
 
     public static void main(String[] args) {
         log.info("STARTING THE APPLICATION");
@@ -54,7 +64,7 @@ public class ServerApp implements CommandLineRunner {
                     .childHandler(new ChannelInitializer<SocketChannel>() {
                         @Override
                         protected void initChannel(SocketChannel ch) throws Exception {
-                            ch.pipeline().addLast(new StringDecoder(), new StringEncoder(), new MainHandler()); //Добавляем декодер и энкодер
+                            ch.pipeline().addLast(new StringDecoder(), new StringEncoder(), new MainHandler(userRepo, taskRepo)); //Добавляем декодер и энкодер
                         } //Инициализация клиента
                     });
             //Запуск сервера

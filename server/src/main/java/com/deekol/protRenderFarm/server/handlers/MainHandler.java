@@ -8,17 +8,15 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
-import java.util.Base64;
-import java.util.List;
-import java.util.TimerTask;
+import java.util.*;
 
 /*
 Главный обработчик.
 Секретный ключ выступает как тестовый.
+Изменение статуса происходит через задержку исполнения и Math.random, от 1 до 5 минут
  */
 
 @Slf4j
@@ -97,6 +95,39 @@ public class MainHandler extends SimpleChannelInboundHandler<String> {
                 System.out.println("Need sign in!");
                 channelClient.writeAndFlush("Need sign in!" + System.lineSeparator());
             }
+        } else if (s.trim().equals("-c") || s.trim().equals("--currenttasks")) {
+            System.out.println("Start command: -c, --currenttasks");
+            if (profile != null) {
+                List<TaskEntity> tasks = taskRepo.findByStatus("RENDERING");
+                channelClient.writeAndFlush(profile.getUsername() + "'s current tasks:" + System.lineSeparator());
+                for(TaskEntity e : tasks) {
+                    channelClient.writeAndFlush(e.getId() + ", " + e.getStatus() + System.lineSeparator());
+                }
+            } else {
+                System.out.println("Need sign in!");
+                channelClient.writeAndFlush("Need sign in!" + System.lineSeparator());
+            }
+        } else if (s.trim().equals("-s") || s.trim().equals("--statushistory")) {
+            System.out.println("Start command: -s, --statushistory");
+            if (profile != null) {
+                List<TaskEntity> tasks = taskRepo.findByUserEntity(profile);
+                channelClient.writeAndFlush(profile.getUsername() + "'s tasks history:" + System.lineSeparator());
+                channelClient.writeAndFlush("№ | status  | start render     | finish render     " + System.lineSeparator());
+                for(TaskEntity e : tasks) {
+                    String fr;
+                    if (e.getFinishRender() != null) {
+                        fr = calOut(e.getFinishRender());
+                    } else {
+                        fr = "Still RENDERING";
+                    }
+                    channelClient.writeAndFlush(e.getId() + ", " + e.getStatus() + ", "
+                            + calOut(e.getStartRender()) + ", "
+                            + fr + System.lineSeparator());
+                }
+            } else {
+                System.out.println("Need sign in!");
+                channelClient.writeAndFlush("Need sign in!" + System.lineSeparator());
+            }
         } else {
             helper();
         }
@@ -112,11 +143,14 @@ public class MainHandler extends SimpleChannelInboundHandler<String> {
 
     //Метод отправляет help сообщение клиенту
     void helper() {
-        channelClient.writeAndFlush("Usage:" + System.lineSeparator() + "  -h, --help        Show help message" + System.lineSeparator()
-                + "  -l, --login       Log in (-l user password)" + System.lineSeparator()
-                + "  -r, --reg         Registration (-r user password)" + System.lineSeparator()
-                + "  -n, --newtask     Add new task" + System.lineSeparator()
-                + "  -t, --tasks       Get all task" + System.lineSeparator()
+        channelClient.writeAndFlush("Usage:" + System.lineSeparator()
+                + "  -h, --help           Show help message" + System.lineSeparator()
+                + "  -l, --login          Log in (-l user password)" + System.lineSeparator()
+                + "  -r, --reg            Registration (-r user password)" + System.lineSeparator()
+                + "  -n, --newtask        Add new task" + System.lineSeparator()
+                + "  -t, --tasks          Get all task" + System.lineSeparator()
+                + "  -c, --currenttasks   Get tasks where status is RENDERING" + System.lineSeparator()
+                + "  -s, --statushistory  Get history change tasks" + System.lineSeparator()
      );
     }
 
@@ -131,6 +165,7 @@ public class MainHandler extends SimpleChannelInboundHandler<String> {
                 new TimerTask() {
                     public void run() {
                         taskEntity.setStatus("COMPLETE");
+                        taskEntity.setFinishRender(Calendar.getInstance());
                         taskRepo.save(taskEntity);
                         System.out.println("Task№" + taskEntity.getId() + " status changed to COMPLETE");
                         channelClient.writeAndFlush("Task №" + taskEntity.getId() + " status changed to COMPLETE" + System.lineSeparator());
@@ -152,5 +187,14 @@ public class MainHandler extends SimpleChannelInboundHandler<String> {
         cipher.init(Cipher.DECRYPT_MODE, sk);
         byte[] bytes = cipher.doFinal(Base64.getDecoder().decode(pass));
         return new String(bytes);
+    }
+
+    //Время для отправки клиенту
+    String calOut(Calendar cal) {
+        return cal.get(Calendar.YEAR) + "-" + cal.get(Calendar.MONTH) + "-"
+                + cal.get(Calendar.DAY_OF_MONTH) + " "
+                + cal.get(Calendar.HOUR) + ":"
+                + cal.get(Calendar.MINUTE) + ":"
+                + cal.get(Calendar.SECOND);
     }
 }

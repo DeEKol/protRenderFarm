@@ -4,9 +4,13 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import javax.persistence.*;
+import java.time.LocalDate;
+import java.util.Calendar;
+import java.util.Date;
 
 /*
-Как понял колонка с description или name не нужна
+Как понял колонка с description или name не нужна.
+Создал startRender и finishRender для сохранения истории смены статусов.
  */
 
 @Data
@@ -19,6 +23,11 @@ public class TaskEntity {
     private Long id;
 
     private String status = "RENDERING";
+
+    @Column(name = "start_render")
+    private Calendar startRender = Calendar.getInstance();
+    @Column(name = "finish_render")
+    private Calendar finishRender;
 
     @ManyToOne
     @JoinColumn(name = "user_id")

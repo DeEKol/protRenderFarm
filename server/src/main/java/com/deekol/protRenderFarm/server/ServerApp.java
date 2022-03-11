@@ -22,6 +22,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 Запуск приложения с настройкой SpringBoot(без web'а) и логами.
 Настройка запуска сервера на Netty.
 Добавлен MainHandler. Подключаюсь к серверу с помощью telnet (PuTTY программы).
+Создан клиент(модуль client) для подключения к серверу.
  */
 
 @Slf4j
@@ -63,8 +64,8 @@ public class ServerApp implements CommandLineRunner {
                     .channel(NioServerSocketChannel.class)
                     .childHandler(new ChannelInitializer<SocketChannel>() {
                         @Override
-                        protected void initChannel(SocketChannel ch) throws Exception {
-                            ch.pipeline().addLast(new StringDecoder(), new StringEncoder(), new MainHandler(userRepo, taskRepo)); //Добавляем декодер и энкодер
+                        protected void initChannel(SocketChannel ch) {
+                            ch.pipeline().addLast(new StringDecoder(), new StringEncoder(), new MainHandler(userRepo, taskRepo)); //Добавляем декодер, энкодер и обработчик
                         } //Инициализация клиента
                     });
             //Запуск сервера

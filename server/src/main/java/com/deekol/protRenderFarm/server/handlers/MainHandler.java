@@ -16,13 +16,14 @@ import java.util.*;
 /*
 Главный обработчик.
 Секретный ключ выступает как тестовый.
-Изменение статуса происходит через задержку исполнения и Math.random, от 1 до 5 минут
+Изменение статуса происходит через задержку исполнения и Math.random, от 1 до 5 минут.
+Оставил логику в одном месте, так как её не много. При расширении вижу смысл разбить на регистрация/авторизация и работа с задачами.
  */
 
 @Slf4j
 public class MainHandler extends SimpleChannelInboundHandler<String> {
     //todo: переделать секретный ключ (тестовый вариант)
-    private SecretKeySpec sk = new SecretKeySpec("1212121212121212".getBytes(), "AES");
+    private final SecretKeySpec sk = new SecretKeySpec("1212121212121212".getBytes(), "AES");
 
     private final UserRepo userRepo;
     private final TaskRepo taskRepo;
@@ -37,7 +38,7 @@ public class MainHandler extends SimpleChannelInboundHandler<String> {
 
     //Активация канала
     @Override
-    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+    public void channelActive(ChannelHandlerContext ctx) {
         log.info("Client connected");
         channelClient = ctx.channel();
         channelClient.writeAndFlush("Connected" + System.lineSeparator());
@@ -48,9 +49,12 @@ public class MainHandler extends SimpleChannelInboundHandler<String> {
     @Override
     protected void channelRead0(ChannelHandlerContext channelHandlerContext, String s) throws Exception {
         System.out.println("Message received: " + s);
+        //Вызов списка команд
         if (s.trim().equals("-h") || s.trim().equals("--help")) {
             helper();
-        } else if (s.startsWith("-l") || s.startsWith("--login")) {
+        }
+        //Авторизация пользователя
+        else if (s.startsWith("-l") || s.startsWith("--login")) {
             System.out.println("Start command: -l, --login");
             String[] commandSplit = s.split("\\s", 3); //Разбиваем полученную строку
             UserEntity user = userRepo.findByUsername(commandSplit[1]); //Ищем юзера в бд
@@ -62,57 +66,69 @@ public class MainHandler extends SimpleChannelInboundHandler<String> {
                 System.out.println("Invalid login or password!");
                 channelClient.writeAndFlush("Invalid login or password!" + System.lineSeparator());
             }
-        } else if (s.startsWith("-r") || s.startsWith("--reg")) {
+        }
+        //Регистрация нового пользователя
+        else if (s.startsWith("-r") || s.startsWith("--reg")) {
             System.out.println("Start command: -r, --reg");
             String[] commandSplit = s.split("\\s", 3);
             UserEntity userEntity = new UserEntity(commandSplit[1], encrypt(commandSplit[2].trim(), sk));
             userRepo.save(userEntity);
             log.info("Registered user: " + commandSplit[1]);
             channelClient.writeAndFlush("Registered user: " + commandSplit[1] + System.lineSeparator());
-        } else if (s.trim().equals("-n") || s.trim().equals("--newtask")) {
+        }
+        //Создание новой задачи
+        else if (s.trim().equals("-n") || s.trim().equals("--newtask")) {
             System.out.println("Start command: -n, --newtask");
             if (profile != null) {
                 TaskEntity taskEntity = new TaskEntity(profile);
                 taskRepo.save(taskEntity);
-                System.out.println("User " + profile.getUsername() + " create new task №" + taskEntity.getId());
-                System.out.println("Status: RENDERING");
-                channelClient.writeAndFlush("User " + profile.getUsername() + " create new task №" + taskEntity.getId() + System.lineSeparator());
-                channelClient.writeAndFlush("Status: RENDERING" + System.lineSeparator());
+                log.info("User " + profile.getUsername() + " create new task №" + taskEntity.getId() + "; Status: RENDERING");
+                channelClient.write("User " + profile.getUsername() + " create new task №" + taskEntity.getId() + System.lineSeparator());
+                channelClient.write("Status: RENDERING" + System.lineSeparator());
+                channelClient.flush();
                 changeTaskStatus(taskEntity);
             } else {
                 System.out.println("Need sign in!");
                 channelClient.writeAndFlush("Need sign in!" + System.lineSeparator());
             }
-        } else if (s.trim().equals("-t") || s.trim().equals("--tasks")) {
+        }
+        //Отправка всех задач
+        else if (s.trim().equals("-t") || s.trim().equals("--tasks")) {
             System.out.println("Start command: -t, --tasks");
             if (profile != null) {
                 List<TaskEntity> tasks = taskRepo.findByUserEntity(profile);
-                channelClient.writeAndFlush(profile.getUsername() + "'s tasks:" + System.lineSeparator());
+                channelClient.write(profile.getUsername() + "'s tasks:" + System.lineSeparator());
                 for(TaskEntity e : tasks) {
-                    channelClient.writeAndFlush(e.getId() + ", " + e.getStatus() + System.lineSeparator());
+                    channelClient.write(e.getId() + ", " + e.getStatus() + System.lineSeparator());
                 }
+                channelClient.flush();
             } else {
                 System.out.println("Need sign in!");
                 channelClient.writeAndFlush("Need sign in!" + System.lineSeparator());
             }
-        } else if (s.trim().equals("-c") || s.trim().equals("--currenttasks")) {
+        }
+        //Отправка текущих задач
+        else if (s.trim().equals("-c") || s.trim().equals("--currenttasks")) {
             System.out.println("Start command: -c, --currenttasks");
             if (profile != null) {
                 List<TaskEntity> tasks = taskRepo.findByStatus("RENDERING");
-                channelClient.writeAndFlush(profile.getUsername() + "'s current tasks:" + System.lineSeparator());
+                channelClient.write(profile.getUsername() + "'s current tasks:" + System.lineSeparator());
                 for(TaskEntity e : tasks) {
-                    channelClient.writeAndFlush(e.getId() + ", " + e.getStatus() + System.lineSeparator());
+                    channelClient.write(e.getId() + ", " + e.getStatus() + System.lineSeparator());
                 }
+                channelClient.flush();
             } else {
                 System.out.println("Need sign in!");
                 channelClient.writeAndFlush("Need sign in!" + System.lineSeparator());
             }
-        } else if (s.trim().equals("-s") || s.trim().equals("--statushistory")) {
+        }
+        //Отправка истории изменения статуса задач
+        else if (s.trim().equals("-s") || s.trim().equals("--statushistory")) {
             System.out.println("Start command: -s, --statushistory");
             if (profile != null) {
                 List<TaskEntity> tasks = taskRepo.findByUserEntity(profile);
-                channelClient.writeAndFlush(profile.getUsername() + "'s tasks history:" + System.lineSeparator());
-                channelClient.writeAndFlush("№ | status  | start render     | finish render     " + System.lineSeparator());
+                channelClient.write(profile.getUsername() + "'s tasks history:" + System.lineSeparator());
+                channelClient.write("№ | status  | start render     | finish render     " + System.lineSeparator());
                 for(TaskEntity e : tasks) {
                     String fr;
                     if (e.getFinishRender() != null) {
@@ -120,10 +136,11 @@ public class MainHandler extends SimpleChannelInboundHandler<String> {
                     } else {
                         fr = "Still RENDERING";
                     }
-                    channelClient.writeAndFlush(e.getId() + ", " + e.getStatus() + ", "
+                    channelClient.write(e.getId() + ", " + e.getStatus() + ", "
                             + calOut(e.getStartRender()) + ", "
                             + fr + System.lineSeparator());
                 }
+                channelClient.flush();
             } else {
                 System.out.println("Need sign in!");
                 channelClient.writeAndFlush("Need sign in!" + System.lineSeparator());
@@ -135,7 +152,7 @@ public class MainHandler extends SimpleChannelInboundHandler<String> {
 
     //Ошибка канала
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         cause.printStackTrace();
         log.info("Client leave");
         ctx.close();
@@ -158,7 +175,7 @@ public class MainHandler extends SimpleChannelInboundHandler<String> {
     public void changeTaskStatus(TaskEntity taskEntity) {
         //Рандомное число от 1 до 5 минут
         int randomFromOneToFiveMinute = (int) (60000 + 240000 * Math.random());
-        System.out.println("RENDERING finish in " + randomFromOneToFiveMinute + " ms");
+        log.info("RENDERING finish in " + randomFromOneToFiveMinute + " ms");
 
         //Задержка исполнения (от 1 до 5 минут)
         new java.util.Timer().schedule(
@@ -167,7 +184,7 @@ public class MainHandler extends SimpleChannelInboundHandler<String> {
                         taskEntity.setStatus("COMPLETE");
                         taskEntity.setFinishRender(Calendar.getInstance());
                         taskRepo.save(taskEntity);
-                        System.out.println("Task№" + taskEntity.getId() + " status changed to COMPLETE");
+                        log.info("Task №" + taskEntity.getId() + " status changed to COMPLETE");
                         channelClient.writeAndFlush("Task №" + taskEntity.getId() + " status changed to COMPLETE" + System.lineSeparator());
                     }
                 },
@@ -189,7 +206,7 @@ public class MainHandler extends SimpleChannelInboundHandler<String> {
         return new String(bytes);
     }
 
-    //Время для отправки клиенту
+    //Форматирование времени для отправки клиенту
     String calOut(Calendar cal) {
         return cal.get(Calendar.YEAR) + "-" + cal.get(Calendar.MONTH) + "-"
                 + cal.get(Calendar.DAY_OF_MONTH) + " "

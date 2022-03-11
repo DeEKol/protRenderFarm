@@ -1,8 +1,8 @@
 package com.deekol.protRenderFarm.server;
 
 import com.deekol.protRenderFarm.server.handlers.MainHandler;
-import com.deekol.protRenderFarm.server.repo.TaskRepo;
-import com.deekol.protRenderFarm.server.repo.UserRepo;
+import com.deekol.protRenderFarm.server.handlers.SecurityHandler;
+import com.deekol.protRenderFarm.server.handlers.TaskHandler;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -28,12 +28,12 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @Slf4j
 @SpringBootApplication
 public class ServerApp implements CommandLineRunner {
-    private final UserRepo userRepo;
-    private final TaskRepo taskRepo;
+    private final SecurityHandler securityHandler;
+    private final TaskHandler taskHandler;
 
-    public ServerApp(UserRepo userRepo, TaskRepo taskRepo) {
-        this.userRepo = userRepo;
-        this.taskRepo = taskRepo;
+    public ServerApp(SecurityHandler securityHandler, TaskHandler taskHandler) {
+        this.securityHandler = securityHandler;
+        this.taskHandler = taskHandler;
     }
 
     @Value("${port}")
@@ -65,7 +65,7 @@ public class ServerApp implements CommandLineRunner {
                     .childHandler(new ChannelInitializer<SocketChannel>() {
                         @Override
                         protected void initChannel(SocketChannel ch) {
-                            ch.pipeline().addLast(new StringDecoder(), new StringEncoder(), new MainHandler(userRepo, taskRepo)); //Добавляем декодер, энкодер и обработчик
+                            ch.pipeline().addLast(new StringDecoder(), new StringEncoder(), new MainHandler(securityHandler, taskHandler)); //Добавляем декодер, энкодер и обработчик
                         } //Инициализация клиента
                     });
             //Запуск сервера

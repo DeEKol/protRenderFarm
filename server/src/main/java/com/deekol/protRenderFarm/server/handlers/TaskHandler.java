@@ -1,6 +1,6 @@
 package com.deekol.protRenderFarm.server.handlers;
 
-import com.deekol.protRenderFarm.server.Service.TaskService;
+import com.deekol.protRenderFarm.server.service.TaskService;
 import com.deekol.protRenderFarm.server.domain.TaskEntity;
 import com.deekol.protRenderFarm.server.domain.UserEntity;
 import io.netty.channel.Channel;
@@ -120,7 +120,7 @@ public class TaskHandler {
     }
 
     //Форматирование времени для отправки клиенту
-    String calOut(Calendar cal) {
+    private String calOut(Calendar cal) {
         return cal.get(Calendar.YEAR) + "-" + cal.get(Calendar.MONTH) + "-"
                 + cal.get(Calendar.DAY_OF_MONTH) + " "
                 + cal.get(Calendar.HOUR) + ":"

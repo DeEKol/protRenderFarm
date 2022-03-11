@@ -1,6 +1,6 @@
 package com.deekol.protRenderFarm.server.handlers;
 
-import com.deekol.protRenderFarm.server.Service.UserService;
+import com.deekol.protRenderFarm.server.service.UserService;
 import com.deekol.protRenderFarm.server.domain.UserEntity;
 import io.netty.channel.Channel;
 import lombok.extern.slf4j.Slf4j;

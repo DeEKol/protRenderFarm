@@ -1,4 +1,4 @@
-package com.deekol.protRenderFarm.server.Service;
+package com.deekol.protRenderFarm.server.service;
 
 import com.deekol.protRenderFarm.server.domain.UserEntity;
 import com.deekol.protRenderFarm.server.repo.UserRepo;
